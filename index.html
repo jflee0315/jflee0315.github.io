@@ -257,6 +257,84 @@
       pointer-events: none;
     }
 
+    /* ── Feed type toggle ── */
+    .feed-type-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .feed-type-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--navy-3);
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 13px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .feed-type-label:has(input:checked) {
+      border-color: var(--lavender);
+      background: rgba(200,184,232,0.1);
+    }
+
+    .feed-type-label input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: transparent;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .feed-type-label input[type="checkbox"]:checked {
+      background: var(--lavender);
+      border-color: var(--lavender);
+    }
+
+    .feed-type-label input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 6px;
+      height: 10px;
+      border: 2px solid #141c2e;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
+    .feed-type-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+    }
+
+    .feed-type-emoji {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* ── ml input group (conditionally shown) ── */
+    #ml-group {
+      display: none;
+    }
+    #ml-group.visible {
+      display: block;
+    }
+
     /* ── Last feed summary ── */
     #last-feed {
       display: none;
@@ -436,6 +514,21 @@
 
     <div id="end-form">
       <div class="input-group">
+        <label>Feed type</label>
+        <div class="feed-type-row">
+          <label class="feed-type-label">
+            <input type="checkbox" id="cb-breast" onchange="onFeedTypeChange()" />
+            <span class="feed-type-emoji">🤱</span>
+            <span class="feed-type-text">Breast</span>
+          </label>
+          <label class="feed-type-label">
+            <input type="checkbox" id="cb-formula" onchange="onFeedTypeChange()" />
+            <span class="feed-type-emoji">🍼</span>
+            <span class="feed-type-text">Formula</span>
+          </label>
+        </div>
+      </div>
+      <div class="input-group" id="ml-group">
         <label for="ml-input">Amount fed</label>
         <div class="ml-wrapper">
           <input type="number" id="ml-input" inputmode="decimal" placeholder="e.g. 120" min="0" max="500" />
@@ -558,30 +651,57 @@
 
   // ── End ────────────────────────────────────────────────────
   function endSession() {
-    const mlInput  = document.getElementById('ml-input');
-    const timeInput = document.getElementById('end-time-input');
-    const ml = parseFloat(mlInput.value);
+    const breastChecked  = document.getElementById('cb-breast').checked;
+    const formulaChecked = document.getElementById('cb-formula').checked;
+    const mlInput        = document.getElementById('ml-input');
+    const timeInput      = document.getElementById('end-time-input');
 
-    if (isNaN(ml) || ml < 0) {
-      mlInput.focus();
-      mlInput.style.borderColor = 'var(--blush)';
-      setTimeout(() => mlInput.style.borderColor = '', 1200);
+    // Must pick at least one type
+    if (!breastChecked && !formulaChecked) {
+      const row = document.querySelector('.feed-type-row');
+      row.style.outline = '2px solid var(--blush)';
+      row.style.borderRadius = '14px';
+      setTimeout(() => { row.style.outline = ''; row.style.borderRadius = ''; }, 1200);
       return;
     }
 
-    // Resolve end time
+    // ml required only for formula
+    let ml = null;
+    if (formulaChecked) {
+      ml = parseFloat(mlInput.value);
+      if (isNaN(ml) || ml < 0) {
+        mlInput.focus();
+        mlInput.style.borderColor = 'var(--blush)';
+        setTimeout(() => mlInput.style.borderColor = '', 1200);
+        return;
+      }
+    }
+
+    // Resolve end time — pick whichever direction (same day or next day) gives the shorter duration
     let endTime = Date.now();
     if (timeInput.value) {
-      const today = new Date();
       const [hh, mm] = timeInput.value.split(':');
-      today.setHours(parseInt(hh), parseInt(mm), 0, 0);
-      endTime = today.getTime();
+      const candidate = new Date();
+      candidate.setHours(parseInt(hh), parseInt(mm), 0, 0);
+      const sameDayMs = candidate.getTime();
+      const nextDayMs = sameDayMs + 24 * 60 * 60 * 1000;
+      const prevDayMs = sameDayMs - 24 * 60 * 60 * 1000;
+      // Pick whichever candidate is closest to startTime (shortest absolute gap)
+      const start = activeSession.startTime;
+      const options = [prevDayMs, sameDayMs, nextDayMs];
+      endTime = options.reduce((best, t) => Math.abs(t - start) < Math.abs(best - start) ? t : best);
     }
+
+    // Build type label
+    const types = [];
+    if (breastChecked)  types.push('breast');
+    if (formulaChecked) types.push('formula');
 
     const session = {
       id: activeSession.startTime,
       startTime: activeSession.startTime,
       endTime,
+      types,
       ml,
     };
 
@@ -604,6 +724,18 @@
     catch { return []; }
   }
 
+  // ── Feed type toggle ───────────────────────────────────────
+  function onFeedTypeChange() {
+    const formulaChecked = document.getElementById('cb-formula').checked;
+    const mlGroup = document.getElementById('ml-group');
+    if (formulaChecked) {
+      mlGroup.classList.add('visible');
+    } else {
+      mlGroup.classList.remove('visible');
+      document.getElementById('ml-input').value = '';
+    }
+  }
+
   // ── Reset UI ───────────────────────────────────────────────
   function resetToIdle() {
     clearInterval(timerInterval);
@@ -619,13 +751,18 @@
     document.getElementById('timer-sub').textContent = 'waiting to start';
     document.getElementById('ml-input').value = '';
     document.getElementById('end-time-input').value = '';
+    document.getElementById('cb-breast').checked = false;
+    document.getElementById('cb-formula').checked = false;
+    document.getElementById('ml-group').classList.remove('visible');
   }
 
   // ── Last feed banner ───────────────────────────────────────
   function showLastFeed(session) {
     const el = document.getElementById('last-feed');
     const dur = formatDuration(session.endTime - session.startTime);
-    el.textContent = `✓ Logged ${session.ml} ml · ${dur} session`;
+    const typeLabel = session.types.map(t => t === 'breast' ? '🤱 Breast' : '🍼 Formula').join(' + ');
+    const mlPart = session.ml != null ? ` · ${session.ml} ml` : '';
+    el.textContent = `✓ ${typeLabel}${mlPart} · ${dur} session`;
     el.style.display = 'block';
     el.style.marginBottom = '14px';
   }
@@ -649,16 +786,21 @@
       const start = new Date(s.startTime);
       const end   = new Date(s.endTime);
       const dur   = formatDuration(s.endTime - s.startTime);
+      // Support old records that only had ml (no types)
+      const types = s.types || ['formula'];
+      const typeLabel = types.map(t => t === 'breast' ? '🤱 Breast' : '🍼 Formula').join(' + ');
+      const mlDisplay = s.ml != null
+        ? `<div class="feed-ml">${s.ml}</div><div class="feed-ml-unit">ml</div>`
+        : `<div class="feed-ml" style="font-size:22px">🤱</div>`;
       return `
         <div class="feed-item">
           <div>
             <div class="feed-time">${formatTime(start)}</div>
-            <div class="feed-meta">${formatDate(start)}</div>
+            <div class="feed-meta">${formatDate(start)} · ${typeLabel}</div>
             <div class="feed-duration">⏱ ${dur} · ended ${formatTime(end)}</div>
           </div>
           <div class="feed-amount">
-            <div class="feed-ml">${s.ml}</div>
-            <div class="feed-ml-unit">ml</div>
+            ${mlDisplay}
           </div>
           <button class="delete-btn" onclick="deleteSession(${s.id})" title="Delete">×</button>
         </div>
@@ -683,12 +825,13 @@
     const today = sessions.filter(s => s.startTime >= todayStart.getTime());
 
     const count = today.length;
-    const total = today.reduce((sum, s) => sum + s.ml, 0);
-    const avg   = count ? Math.round(total / count) : 0;
+    const formulaSessions = today.filter(s => s.ml != null);
+    const total = formulaSessions.reduce((sum, s) => sum + s.ml, 0);
+    const avg   = formulaSessions.length ? Math.round(total / formulaSessions.length) : 0;
 
     document.getElementById('stat-feeds').textContent = count || '—';
-    document.getElementById('stat-total').textContent = count ? total : '—';
-    document.getElementById('stat-avg').textContent   = count ? avg  : '—';
+    document.getElementById('stat-total').textContent = formulaSessions.length ? total : '—';
+    document.getElementById('stat-avg').textContent   = formulaSessions.length ? avg  : '—';
   }
 
   // ── Delete single session ──────────────────────────────────
