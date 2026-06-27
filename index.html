@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Leon" />
+  <title>Leon · Feeding Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #141c2e;
+      --navy-2:  #1e2a42;
+      --navy-3:  #263352;
+      --lavender:#c8b8e8;
+      --blush:   #f2c4ce;
+      --cream:   #f7f0e6;
+      --muted:   #8892a4;
+      --green:   #90dba8;
+      --radius:  18px;
+      --radius-sm: 12px;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--navy);
+      color: var(--cream);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: env(safe-area-inset-top, 16px) 0 calc(env(safe-area-inset-bottom, 0px) + 24px);
+      min-height: 100dvh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 24px 24px 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--lavender), var(--blush));
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 0 18px rgba(200,184,232,0.35);
+    }
+
+    header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    header h1 span {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Main layout ── */
+    main {
+      padding: 16px 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--navy-2);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Session card ── */
+    #session-card {
+      background: linear-gradient(145deg, #1e2a42, #1a2238);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .status-dot.active {
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(144,219,168,0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(144,219,168,0.6); }
+      50%       { box-shadow: 0 0 18px rgba(144,219,168,0.9); }
+    }
+
+    .status-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--cream);
+    }
+
+    .timer-display {
+      font-size: 52px;
+      font-weight: 200;
+      letter-spacing: -2px;
+      color: var(--cream);
+      text-align: center;
+      padding: 8px 0 20px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      opacity: 0.25;
+      transition: opacity 0.4s;
+    }
+
+    .timer-display.active {
+      opacity: 1;
+      color: var(--lavender);
+    }
+
+    .timer-sub {
+      display: block;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: -0.2px;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-start {
+      background: linear-gradient(135deg, var(--lavender), #b0a0d8);
+      color: #141c2e;
+      box-shadow: 0 4px 20px rgba(200,184,232,0.3);
+    }
+
+    .btn-start:hover {
+      box-shadow: 0 6px 28px rgba(200,184,232,0.45);
+    }
+
+    .btn-end {
+      background: linear-gradient(135deg, var(--blush), #e8a8b4);
+      color: #1a0e10;
+      box-shadow: 0 4px 20px rgba(242,196,206,0.3);
+    }
+
+    .btn-end:hover {
+      box-shadow: 0 6px 28px rgba(242,196,206,0.45);
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: var(--cream);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* ── End form ── */
+    #end-form {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    #end-form.visible { display: flex; }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: var(--navy-3);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 13px 14px;
+      color: var(--cream);
+      font-size: 16px; /* prevents zoom on iOS */
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: var(--lavender);
+    }
+
+    .input-group input::placeholder { color: var(--muted); }
+
+    .ml-wrapper {
+      position: relative;
+    }
+
+    .ml-wrapper input { padding-right: 38px; }
+
+    .ml-unit {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── Last feed summary ── */
+    #last-feed {
+      display: none;
+      background: rgba(144,219,168,0.08);
+      border: 1px solid rgba(144,219,168,0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--green);
+      line-height: 1.5;
+    }
+
+    /* ── History ── */
+    #history-section .card-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .clear-btn:hover { color: var(--blush); }
+
+    #feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .feed-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 10px;
+      padding: 13px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .feed-item:last-child { border-bottom: none; }
+
+    .feed-time {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--cream);
+    }
+
+    .feed-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .feed-duration {
+      font-size: 11px;
+      color: var(--lavender);
+      margin-top: 1px;
+    }
+
+    .feed-amount {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .feed-ml {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--blush);
+      line-height: 1;
+    }
+
+    .feed-ml-unit {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 28px 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .empty-state .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+    /* ── Stats strip ── */
+    #stats-card {
+      display: none;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: var(--navy-3);
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--lavender);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot.active { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🍼</div>
+  <h1>Leon <span>Feeding Tracker</span></h1>
+</header>
+
+<main>
+
+  <!-- Session Card -->
+  <div class="card" id="session-card">
+    <div class="status-row">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">No active session</span>
+    </div>
+
+    <div class="timer-display" id="timer">
+      00:00<span class="timer-sub" id="timer-sub">waiting to start</span>
+    </div>
+
+    <div id="end-form">
+      <div class="input-group">
+        <label for="ml-input">Amount fed</label>
+        <div class="ml-wrapper">
+          <input type="number" id="ml-input" inputmode="decimal" placeholder="e.g. 120" min="0" max="500" />
+          <span class="ml-unit">ml</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label for="end-time-input">End time <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional override)</span></label>
+        <input type="time" id="end-time-input" />
+      </div>
+    </div>
+
+    <div id="last-feed"></div>
+
+    <button class="btn btn-start" id="main-btn" onclick="handleMainButton()">
+      Start Feeding
+    </button>
+  </div>
+
+  <!-- Stats Card -->
+  <div class="card" id="stats-card">
+    <div class="card-label">Today's Summary</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-feeds">—</div>
+        <div class="stat-label">Feeds</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Total ml</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-avg">—</div>
+        <div class="stat-label">Avg ml</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Card -->
+  <div class="card" id="history-section">
+    <div class="card-label">
+      <span>Feeding History</span>
+      <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+    </div>
+    <div id="feed-list">
+      <div class="empty-state">
+        <div class="empty-icon">🌙</div>
+        Sessions will appear here once complete.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── State ──────────────────────────────────────────────────
+  const STORAGE_KEY = 'leon_sessions';
+  const ACTIVE_KEY  = 'leon_active_session';
+
+  let timerInterval = null;
+  let activeSession = null;
+
+  // ── Init ───────────────────────────────────────────────────
+  function init() {
+    const saved = localStorage.getItem(ACTIVE_KEY);
+    if (saved) {
+      activeSession = JSON.parse(saved);
+      enterActiveState();
+    }
+    renderHistory();
+    renderStats();
+  }
+
+  // ── Main button handler ────────────────────────────────────
+  function handleMainButton() {
+    if (!activeSession) {
+      startSession();
+    } else {
+      endSession();
+    }
+  }
+
+  // ── Start ──────────────────────────────────────────────────
+  function startSession() {
+    const now = Date.now();
+    activeSession = { startTime: now };
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeSession));
+    enterActiveState();
+    hideLastFeed();
+  }
+
+  function enterActiveState() {
+    document.getElementById('status-dot').classList.add('active');
+    document.getElementById('status-text').textContent = 'Feeding in progress';
+    document.getElementById('end-form').classList.add('visible');
+    document.getElementById('main-btn').textContent = 'End Feeding';
+    document.getElementById('main-btn').className = 'btn btn-end';
+    document.getElementById('timer').classList.add('active');
+    startTimer();
+  }
+
+  // ── Timer ──────────────────────────────────────────────────
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  function updateTimer() {
+    if (!activeSession) return;
+    const elapsed = Math.floor((Date.now() - activeSession.startTime) / 1000);
+    const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const s = (elapsed % 60).toString().padStart(2, '0');
+    const timerEl = document.getElementById('timer');
+    const started = new Date(activeSession.startTime);
+    timerEl.childNodes[0].nodeValue = `${m}:${s}`;
+    document.getElementById('timer-sub').textContent =
+      `started at ${formatTime(started)}`;
+  }
+
+  // ── End ────────────────────────────────────────────────────
+  function endSession() {
+    const mlInput  = document.getElementById('ml-input');
+    const timeInput = document.getElementById('end-time-input');
+    const ml = parseFloat(mlInput.value);
+
+    if (isNaN(ml) || ml < 0) {
+      mlInput.focus();
+      mlInput.style.borderColor = 'var(--blush)';
+      setTimeout(() => mlInput.style.borderColor = '', 1200);
+      return;
+    }
+
+    // Resolve end time
+    let endTime = Date.now();
+    if (timeInput.value) {
+      const today = new Date();
+      const [hh, mm] = timeInput.value.split(':');
+      today.setHours(parseInt(hh), parseInt(mm), 0, 0);
+      endTime = today.getTime();
+    }
+
+    const session = {
+      id: activeSession.startTime,
+      startTime: activeSession.startTime,
+      endTime,
+      ml,
+    };
+
+    saveSession(session);
+    showLastFeed(session);
+    resetToIdle();
+    renderHistory();
+    renderStats();
+  }
+
+  function saveSession(session) {
+    const all = getSessions();
+    all.unshift(session);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    localStorage.removeItem(ACTIVE_KEY);
+  }
+
+  function getSessions() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  // ── Reset UI ───────────────────────────────────────────────
+  function resetToIdle() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    activeSession = null;
+    document.getElementById('status-dot').classList.remove('active');
+    document.getElementById('status-text').textContent = 'No active session';
+    document.getElementById('end-form').classList.remove('visible');
+    document.getElementById('main-btn').textContent = 'Start Feeding';
+    document.getElementById('main-btn').className = 'btn btn-start';
+    document.getElementById('timer').classList.remove('active');
+    document.getElementById('timer').childNodes[0].nodeValue = '00:00';
+    document.getElementById('timer-sub').textContent = 'waiting to start';
+    document.getElementById('ml-input').value = '';
+    document.getElementById('end-time-input').value = '';
+  }
+
+  // ── Last feed banner ───────────────────────────────────────
+  function showLastFeed(session) {
+    const el = document.getElementById('last-feed');
+    const dur = formatDuration(session.endTime - session.startTime);
+    el.textContent = `✓ Logged ${session.ml} ml · ${dur} session`;
+    el.style.display = 'block';
+    el.style.marginBottom = '14px';
+  }
+
+  function hideLastFeed() {
+    const el = document.getElementById('last-feed');
+    el.style.display = 'none';
+  }
+
+  // ── Render history ─────────────────────────────────────────
+  function renderHistory() {
+    const list = document.getElementById('feed-list');
+    const sessions = getSessions();
+
+    if (!sessions.length) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">🌙</div>Sessions will appear here once complete.</div>`;
+      return;
+    }
+
+    list.innerHTML = sessions.map(s => {
+      const start = new Date(s.startTime);
+      const end   = new Date(s.endTime);
+      const dur   = formatDuration(s.endTime - s.startTime);
+      return `
+        <div class="feed-item">
+          <div>
+            <div class="feed-time">${formatTime(start)}</div>
+            <div class="feed-meta">${formatDate(start)}</div>
+            <div class="feed-duration">⏱ ${dur} · ended ${formatTime(end)}</div>
+          </div>
+          <div class="feed-amount">
+            <div class="feed-ml">${s.ml}</div>
+            <div class="feed-ml-unit">ml</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Stats ──────────────────────────────────────────────────
+  function renderStats() {
+    const sessions = getSessions();
+    const statsCard = document.getElementById('stats-card');
+
+    if (!sessions.length) {
+      statsCard.style.display = 'none';
+      return;
+    }
+
+    statsCard.style.display = 'block';
+
+    // Today's sessions
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const today = sessions.filter(s => s.startTime >= todayStart.getTime());
+
+    const count = today.length;
+    const total = today.reduce((sum, s) => sum + s.ml, 0);
+    const avg   = count ? Math.round(total / count) : 0;
+
+    document.getElementById('stat-feeds').textContent = count || '—';
+    document.getElementById('stat-total').textContent = count ? total : '—';
+    document.getElementById('stat-avg').textContent   = count ? avg  : '—';
+  }
+
+  // ── Clear ──────────────────────────────────────────────────
+  function clearHistory() {
+    if (!confirm('Clear all feeding history?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    renderHistory();
+    renderStats();
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  function formatTime(date) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDate(date) {
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    if (isToday) return 'Today';
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function formatDuration(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    if (m === 0) return `${s}s`;
+    if (s === 0) return `${m}m`;
+    return `${m}m ${s}s`;
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>
