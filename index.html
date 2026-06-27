@@ -301,14 +301,34 @@
 
     .feed-item {
       display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: start;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
       gap: 10px;
       padding: 13px 0;
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
 
     .feed-item:last-child { border-bottom: none; }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 2px;
+      border-radius: 6px;
+      transition: color 0.2s, transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      align-self: center;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:active {
+      transform: scale(0.85);
+      color: var(--blush);
+    }
 
     .feed-time {
       font-size: 15px;
@@ -640,6 +660,7 @@
             <div class="feed-ml">${s.ml}</div>
             <div class="feed-ml-unit">ml</div>
           </div>
+          <button class="delete-btn" onclick="deleteSession(${s.id})" title="Delete">×</button>
         </div>
       `;
     }).join('');
@@ -668,6 +689,14 @@
     document.getElementById('stat-feeds').textContent = count || '—';
     document.getElementById('stat-total').textContent = count ? total : '—';
     document.getElementById('stat-avg').textContent   = count ? avg  : '—';
+  }
+
+  // ── Delete single session ──────────────────────────────────
+  function deleteSession(id) {
+    const all = getSessions().filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    renderHistory();
+    renderStats();
   }
 
   // ── Clear ──────────────────────────────────────────────────
