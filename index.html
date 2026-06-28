@@ -328,10 +328,10 @@
     }
 
     /* ── ml input group (conditionally shown) ── */
-    #ml-group {
+    #ml-group, #edit-ml-group {
       display: none;
     }
-    #ml-group.visible {
+    #ml-group.visible, #edit-ml-group.visible {
       display: block;
     }
 
@@ -379,9 +379,9 @@
 
     .feed-item {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       padding: 13px 0;
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
@@ -406,6 +406,105 @@
     .delete-btn:active {
       transform: scale(0.85);
       color: var(--blush);
+    }
+
+    .edit-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 2px;
+      border-radius: 6px;
+      transition: color 0.2s, transform 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      align-self: center;
+      flex-shrink: 0;
+    }
+
+    .edit-btn:active {
+      transform: scale(0.85);
+      color: var(--lavender);
+    }
+
+    /* ── Edit modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 14, 26, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: flex-end;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--navy-2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px 24px 0 0;
+      padding: 20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
+      width: 100%;
+      max-height: 90dvh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .modal-backdrop.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--cream);
+      margin-bottom: 20px;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .modal-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--lavender), #b0a0d8);
+      color: #141c2e;
+      box-shadow: 0 4px 20px rgba(200,184,232,0.3);
+    }
+
+    .btn-cancel {
+      background: rgba(255,255,255,0.06);
+      color: var(--cream);
+      border: 1px solid rgba(255,255,255,0.1);
     }
 
     .feed-time {
@@ -583,7 +682,69 @@
 
 </main>
 
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="edit-modal" onclick="onBackdropClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Session</div>
+    <div class="modal-fields">
+
+      <div class="input-group">
+        <label>Feed type</label>
+        <div class="feed-type-row">
+          <label class="feed-type-label">
+            <input type="checkbox" id="edit-cb-breast" onchange="onEditFeedTypeChange()" />
+            <span class="feed-type-emoji">🤱</span>
+            <span class="feed-type-text">Breast</span>
+          </label>
+          <label class="feed-type-label">
+            <input type="checkbox" id="edit-cb-formula" onchange="onEditFeedTypeChange()" />
+            <span class="feed-type-emoji">🍼</span>
+            <span class="feed-type-text">Formula</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="input-group" id="edit-ml-group">
+        <label for="edit-ml-input">Amount fed</label>
+        <div class="ml-wrapper">
+          <input type="number" id="edit-ml-input" inputmode="decimal" placeholder="e.g. 120" min="0" max="500" />
+          <span class="ml-unit">ml</span>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="input-group">
+          <label for="edit-start-date">Start date</label>
+          <input type="date" id="edit-start-date" />
+        </div>
+        <div class="input-group">
+          <label for="edit-start-time">Start time</label>
+          <input type="time" id="edit-start-time" />
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="input-group">
+          <label for="edit-end-date">End date</label>
+          <input type="date" id="edit-end-date" />
+        </div>
+        <div class="input-group">
+          <label for="edit-end-time">End time</label>
+          <input type="time" id="edit-end-time" />
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-save" onclick="saveEdit()">Save Changes</button>
+      <button class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
+
   // ── State ──────────────────────────────────────────────────
   const STORAGE_KEY = 'leon_sessions';
   const ACTIVE_KEY  = 'leon_active_session';
@@ -802,6 +963,7 @@
           <div class="feed-amount">
             ${mlDisplay}
           </div>
+          <button class="edit-btn" onclick="openEditModal(${s.id})" title="Edit">✎</button>
           <button class="delete-btn" onclick="deleteSession(${s.id})" title="Delete">×</button>
         </div>
       `;
@@ -871,6 +1033,132 @@
     if (m === 0) return `${s}s`;
     if (s === 0) return `${m}m`;
     return `${m}m ${s}s`;
+  }
+
+  // ── Edit modal ─────────────────────────────────────────────
+  let editingId = null;
+
+  function toDateInputValue(ts) {
+    const d = new Date(ts);
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function toTimeInputValue(ts) {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
+  function openEditModal(id) {
+    const session = getSessions().find(s => s.id === id);
+    if (!session) return;
+    editingId = id;
+
+    // Feed type
+    const types = session.types || ['formula'];
+    document.getElementById('edit-cb-breast').checked  = types.includes('breast');
+    document.getElementById('edit-cb-formula').checked = types.includes('formula');
+    onEditFeedTypeChange();
+
+    // ml
+    document.getElementById('edit-ml-input').value = session.ml != null ? session.ml : '';
+
+    // Start
+    document.getElementById('edit-start-date').value = toDateInputValue(session.startTime);
+    document.getElementById('edit-start-time').value = toTimeInputValue(session.startTime);
+
+    // End
+    document.getElementById('edit-end-date').value = toDateInputValue(session.endTime);
+    document.getElementById('edit-end-time').value = toTimeInputValue(session.endTime);
+
+    document.getElementById('edit-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+    document.body.style.overflow = '';
+    editingId = null;
+  }
+
+  function onBackdropClick(e) {
+    if (e.target === document.getElementById('edit-modal')) closeEditModal();
+  }
+
+  function onEditFeedTypeChange() {
+    const formulaChecked = document.getElementById('edit-cb-formula').checked;
+    const mlGroup = document.getElementById('edit-ml-group');
+    if (formulaChecked) {
+      mlGroup.classList.add('visible');
+    } else {
+      mlGroup.classList.remove('visible');
+    }
+  }
+
+  function saveEdit() {
+    if (editingId == null) return;
+
+    const breastChecked  = document.getElementById('edit-cb-breast').checked;
+    const formulaChecked = document.getElementById('edit-cb-formula').checked;
+
+    if (!breastChecked && !formulaChecked) {
+      const row = document.querySelector('#edit-modal .feed-type-row');
+      row.style.outline = '2px solid var(--blush)';
+      row.style.borderRadius = '14px';
+      setTimeout(() => { row.style.outline = ''; row.style.borderRadius = ''; }, 1200);
+      return;
+    }
+
+    let ml = null;
+    if (formulaChecked) {
+      ml = parseFloat(document.getElementById('edit-ml-input').value);
+      if (isNaN(ml) || ml < 0) {
+        const inp = document.getElementById('edit-ml-input');
+        inp.focus();
+        inp.style.borderColor = 'var(--blush)';
+        setTimeout(() => inp.style.borderColor = '', 1200);
+        return;
+      }
+    }
+
+    const startDateVal = document.getElementById('edit-start-date').value;
+    const startTimeVal = document.getElementById('edit-start-time').value;
+    const endDateVal   = document.getElementById('edit-end-date').value;
+    const endTimeVal   = document.getElementById('edit-end-time').value;
+
+    if (!startDateVal || !startTimeVal || !endDateVal || !endTimeVal) {
+      alert('Please fill in all date and time fields.');
+      return;
+    }
+
+    const startTime = new Date(`${startDateVal}T${startTimeVal}:00`).getTime();
+    const endTime   = new Date(`${endDateVal}T${endTimeVal}:00`).getTime();
+
+    if (isNaN(startTime) || isNaN(endTime)) {
+      alert('Invalid date or time. Please check your entries.');
+      return;
+    }
+
+    if (endTime <= startTime) {
+      alert('End time must be after start time.');
+      return;
+    }
+
+    const types = [];
+    if (breastChecked)  types.push('breast');
+    if (formulaChecked) types.push('formula');
+
+    const all = getSessions().map(s => {
+      if (s.id !== editingId) return s;
+      return { ...s, startTime, endTime, types, ml };
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    closeEditModal();
+    renderHistory();
+    renderStats();
   }
 
   // ── Boot ───────────────────────────────────────────────────
